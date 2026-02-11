@@ -23,4 +23,91 @@ let
     #"Reordered Columns1" = Table.ReorderColumns(#"Inserted Merged Column1",{"Date", "Start of Month", "Year", "Quarter", "Year-Quarter", "Month", "Month Name", "Week of Year", "Week of Month", "Day Name", "Day Type", "Short Year", "Mon-Year"}),
     #"Renamed Columns2" = Table.RenameColumns(#"Reordered Columns1",{{"Start of Month", "Start of the Month"}})
 in
+
     #"Renamed Columns2"
+
+
+
+==========================================================================================================================================================================
+let
+    // Get Min & Max Date from Fact Table
+    StartDate = Date.From(List.Min(Fact_sales[Date_Time])),
+    EndDate   = Date.From(List.Max(Fact_sales[Date_Time])),
+
+    // Create Continuous Date List
+    Source = List.Dates(
+        StartDate,
+        Duration.Days(EndDate - StartDate) + 1,
+        #duration(1,0,0,0)
+    ),
+
+    // Convert List to Table
+    #"Converted to Table" = Table.FromList(Source, Splitter.SplitByNothing(), {"Date"}),
+
+    // Ensure Date Type
+    #"Changed Type" = Table.TransformColumnTypes(#"Converted to Table",{{"Date", type date}}),
+
+    // Year
+    #"Inserted Year" = Table.AddColumn(#"Changed Type", "Year", each Date.Year([Date]), Int64.Type),
+
+    // Quarter
+    #"Inserted Quarter" = Table.AddColumn(#"Inserted Year", "Quarter", each "Q" & Text.From(Date.QuarterOfYear([Date])), type text),
+
+    // Year-Quarter
+    #"Inserted Year-Quarter" = Table.AddColumn(#"Inserted Quarter", "Year-Quarter", each Text.From([Year]) & "-" & [Quarter], type text),
+
+    // Month Number
+    #"Inserted Month" = Table.AddColumn(#"Inserted Year-Quarter", "Month", each Date.Month([Date]), Int64.Type),
+
+    // Month Name (Short)
+    #"Inserted Month Name" = Table.AddColumn(#"Inserted Month", "Month Name", each Text.Start(Date.MonthName([Date]),3), type text),
+
+    // Start of Month
+    #"Inserted Start of Month" = Table.AddColumn(#"Inserted Month Name", "Start of the Month", each Date.StartOfMonth([Date]), type date),
+
+    // Week of Year
+    #"Inserted Week of Year" = Table.AddColumn(#"Inserted Start of Month", "Week of Year", each Date.WeekOfYear([Date]), Int64.Type),
+
+    // Week of Month
+    #"Inserted Week of Month" = Table.AddColumn(#"Inserted Week of Year", "Week of Month", each Date.WeekOfMonth([Date]), Int64.Type),
+
+    // Day Name
+    #"Inserted Day Name" = Table.AddColumn(#"Inserted Week of Month", "Day Name", each Date.DayOfWeekName([Date]), type text),
+
+    // Day Type
+    #"Inserted Day Type" = Table.AddColumn(#"Inserted Day Name", "Day Type", each 
+        if Date.DayOfWeek([Date], Day.Monday) >= 5 
+        then "Weekend" 
+        else "Weekday", 
+        type text
+    ),
+
+    // Short Year (Last 2 digits)
+    #"Inserted Short Year" = Table.AddColumn(#"Inserted Day Type", "Short Year", each Text.End(Text.From([Year]),2), type text),
+
+    // Mon-Year
+    #"Inserted Mon-Year" = Table.AddColumn(#"Inserted Short Year", "Mon-Year", each [Month Name] & "-" & [Short Year], type text)
+
+in
+    #"Inserted Mon-Year"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
